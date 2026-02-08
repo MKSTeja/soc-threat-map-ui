@@ -13,7 +13,7 @@ export async function GET() {
     return Response.json(cache.data);
   }
 
-  // 🔥 For now we still use sample_events.json
+  // For now we still use sample_events.json
   const data = await import("../../data/sample_events.json", {
     assert: { type: "json" },
   });
