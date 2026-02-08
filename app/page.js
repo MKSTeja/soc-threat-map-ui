@@ -1,6 +1,11 @@
-import events from "../data/sample_events.json";
+import fs from "fs";
+import path from "path";
 
 export default function Home() {
+  const filePath = path.join(process.cwd(), "data", "sample_events.json");
+  const fileContents = fs.readFileSync(filePath, "utf8");
+  const events = JSON.parse(fileContents);
+
   return (
     <main style={{ padding: 24, fontFamily: "monospace" }}>
       <h1>🌐 Global Threat Map</h1>
