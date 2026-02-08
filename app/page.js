@@ -1,14 +1,6 @@
-async function getEvents() {
-  const res = await fetch("http://localhost:3000/api/events", {
-    cache: "no-store",
-  });
+import events from "../data/sample_events.json";
 
-  return res.json();
-}
-
-export default async function Home() {
-  const events = await getEvents();
-
+export default function Home() {
   return (
     <main style={{ padding: 24, fontFamily: "monospace" }}>
       <h1>🌐 Global Threat Map</h1>
