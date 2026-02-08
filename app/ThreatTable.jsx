@@ -2,55 +2,55 @@
 
 import { useEffect, useState } from "react";
 
-function normalizeEvent(e) {
-  return {
-    ip: e.source_ip || e.ipAddress || "unknown",
-    country: e.country || e.countryCode || "unknown",
-    confidence: e.confidence ?? e.abuseConfidenceScore ?? "N/A",
-    lastSeen: e.last_seen || e.lastReportedAt || null,
-  };
-}
-
 export default function ThreatTable() {
   const [events, setEvents] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   async function fetchEvents() {
-    const res = await fetch("/api/events", { cache: "no-store" });
-    const data = await res.json();
-    setEvents(data.map(normalizeEvent));
+    try {
+      const res = await fetch("/api/events", { cache: "no-store" });
+      const data = await res.json();
+
+      setEvents(data);
+      setLastUpdated(new Date().toLocaleTimeString());
+    } catch (err) {
+      console.error("Failed to fetch events", err);
+    }
   }
 
   useEffect(() => {
     fetchEvents(); // initial load
 
-    const interval = setInterval(fetchEvents, 5000); // 🔁 LIVE refresh
+    const interval = setInterval(fetchEvents, 15000); // auto refresh
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <table border="1" cellPadding="8">
-      <thead>
-        <tr>
-          <th>IP</th>
-          <th>Country</th>
-          <th>Confidence</th>
-          <th>Last Seen</th>
-        </tr>
-      </thead>
-      <tbody>
-        {events.map((e, i) => (
-          <tr key={i}>
-            <td>{e.ip}</td>
-            <td>{e.country}</td>
-            <td>{e.confidence}</td>
-            <td>
-              {e.lastSeen
-                ? new Date(e.lastSeen).toLocaleString()
-                : "unknown"}
-            </td>
+    <>
+      <p style={{ fontSize: 12, opacity: 0.7 }}>
+        Last updated: {lastUpdated || "loading..."}
+      </p>
+
+      <table border="1" cellPadding="8">
+        <thead>
+          <tr>
+            <th>IP</th>
+            <th>Country</th>
+            <th>Confidence</th>
+            <th>Last Seen</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {events.map((e, i) => (
+            <tr key={i}>
+              <td>{e.source_ip || e.ipAddress}</td>
+              <td>{e.country || e.countryCode}</td>
+              <td>{e.confidence || e.abuseConfidenceScore}</td>
+              <td>{e.last_seen || e.lastReportedAt}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
   );
 }
