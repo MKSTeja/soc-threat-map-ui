@@ -5,7 +5,7 @@ let cache = {
   lastFetch: 0,
 };
 
-const CACHE_TTL = 60 * 1000;
+const CACHE_TTL = 60 * 1000; // 1 minute
 
 export async function GET() {
   const now = Date.now();
@@ -21,7 +21,6 @@ export async function GET() {
 
   return Response.json(cache.data);
 }
-
 
 
 /*
