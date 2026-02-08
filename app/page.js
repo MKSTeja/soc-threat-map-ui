@@ -1,10 +1,17 @@
-import fs from "fs";
-import path from "path";
+async function getEvents() {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/events`, {
+    cache: "no-store",
+  });
 
-export default function Home() {
-  const filePath = path.join(process.cwd(), "data", "sample_events.json");
-  const fileContents = fs.readFileSync(filePath, "utf8");
-  const events = JSON.parse(fileContents);
+  if (!res.ok) {
+    throw new Error("Failed to fetch events");
+  }
+
+  return res.json();
+}
+
+export default async function Home() {
+  const events = await getEvents();
 
   return (
     <main style={{ padding: 24, fontFamily: "monospace" }}>
