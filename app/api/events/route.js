@@ -25,3 +25,18 @@ export async function GET() {
 
   return Response.json(cache.data);
 }
+
+
+/*
+FUTURE:
+Replace sample data with AbuseIPDB fetch
+
+const res = await fetch("https://api.abuseipdb.com/api/v2/blacklist", {
+  headers: {
+    Key: process.env.ABUSEIPDB_API_KEY,
+    Accept: "application/json",
+  },
+});
+
+const data = await res.json();
+*/
