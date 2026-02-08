@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
-import data from "../../data/sample_events.json";
+import fs from "fs";
+import path from "path";
 
 export async function GET() {
+  const filePath = path.join(process.cwd(), "data", "sample_events.json");
+  const fileContents = fs.readFileSync(filePath, "utf8");
+  const data = JSON.parse(fileContents);
+
   return NextResponse.json(data);
 }
+
