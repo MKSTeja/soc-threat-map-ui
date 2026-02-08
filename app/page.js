@@ -1,3 +1,5 @@
+// auto-refresh enabled
+
 import AutoRefresh from "./components/AutoRefresh";
 
 async function getEvents() {
