@@ -1,13 +1,27 @@
-import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+let cache = {
+  data: null,
+  lastFetch: 0,
+};
 
-export const revalidate = 300; // 🔑 this makes it "live"
+const CACHE_TTL = 60 * 1000; // 1 minute
 
 export async function GET() {
-  const filePath = path.join(process.cwd(), "data", "sample_events.json");
-  const raw = fs.readFileSync(filePath, "utf-8");
-  const data = JSON.parse(raw);
+  const now = Date.now();
 
-  return NextResponse.json(data);
+  // Serve cached data if fresh
+  if (cache.data && now - cache.lastFetch < CACHE_TTL) {
+    return Response.json(cache.data);
+  }
+
+  // 🔥 For now we still use sample_events.json
+  const data = await import("../../data/sample_events.json", {
+    assert: { type: "json" },
+  });
+
+  cache = {
+    data: data.default,
+    lastFetch: now,
+  };
+
+  return Response.json(cache.data);
 }
