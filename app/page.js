@@ -1,4 +1,4 @@
-import ThreatTable from "./ThreatTable";
+import ThreatMap from "./components/ThreatMap";
 
 export default function Home() {
   return (
@@ -6,7 +6,7 @@ export default function Home() {
       <h1>🌐 Global Threat Map</h1>
       <p>Live abuse intelligence feed (MVP)</p>
 
-      <ThreatTable />
+      <ThreatMap />
     </main>
   );
 }
