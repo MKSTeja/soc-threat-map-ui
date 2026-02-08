@@ -1,3 +1,5 @@
+import AutoRefresh from "./components/AutoRefresh";
+
 async function getEvents() {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/events`, {
     cache: "no-store",
@@ -15,6 +17,9 @@ export default async function Home() {
 
   return (
     <main style={{ padding: 24, fontFamily: "monospace" }}>
+      {/* 🔁 Client-side auto refresh */}
+      <AutoRefresh interval={15000} />
+
       <h1>🌐 Global Threat Map</h1>
       <p>Live abuse intelligence feed (MVP)</p>
 
