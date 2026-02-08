@@ -14,6 +14,8 @@ export default function RootLayout({ children }) {
         />
       </head>
 
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
       <body
         style={{
           margin: 0,
