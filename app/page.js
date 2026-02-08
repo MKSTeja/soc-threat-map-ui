@@ -1,5 +1,5 @@
 async function getEvents() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/events`, {
+  const res = await fetch("http://localhost:3000/api/events", {
     cache: "no-store",
   });
 
@@ -10,7 +10,7 @@ export default async function Home() {
   const events = await getEvents();
 
   return (
-    <main style={{ padding: "24px", fontFamily: "monospace" }}>
+    <main style={{ padding: 24, fontFamily: "monospace" }}>
       <h1>🌐 Global Threat Map</h1>
       <p>Live abuse intelligence feed (MVP)</p>
 
