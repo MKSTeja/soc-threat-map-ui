@@ -14,48 +14,71 @@ const COUNTRY_COORDS = {
   IN: [20.5937, 78.9629],
 };
 
+// A11.2 + A11.5 helpers
 function getColor(severity) {
   if (severity === "critical") return "#ff2b2b";
   if (severity === "high") return "#ff8c00";
   return "#ffd700";
 }
 
+function getRadius(severity) {
+  if (severity === "critical") return 14;
+  if (severity === "high") return 10;
+  return 7;
+}
+
 export default function ThreatMap({ events }) {
   return (
-    <MapContainer
-      center={[20, 0]}
-      zoom={2}
-      style={{ height: "420px", width: "100%", borderRadius: 12 }}
-    >
-      <TileLayer
-        attribution="© OpenStreetMap"
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+    <div style={{ marginBottom: 24 }}>
+      <MapContainer
+        center={[20, 0]}
+        zoom={2}
+        style={{ height: "420px", width: "100%", borderRadius: 12 }}
+      >
+        <TileLayer
+          attribution="© OpenStreetMap"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
-      {events.map((e, i) => {
-        const coords = COUNTRY_COORDS[e.country];
-        if (!coords) return null;
+        {events.map((e, i) => {
+          const coords = COUNTRY_COORDS[e.country];
+          if (!coords) return null;
 
-        return (
-          <CircleMarker
-            key={i}
-            center={coords}
-            radius={8}
-            fillColor={getColor(e.severity)}
-            fillOpacity={0.85}
-            color="black"
-            weight={1}
-          >
-            <Popup>
-              <strong>{e.ip}</strong><br />
-              Country: {e.country}<br />
-              Confidence: {e.confidence}<br />
-              Severity: {e.severity}<br />
-              Last Seen: {new Date(e.lastSeen).toUTCString()}
-            </Popup>
-          </CircleMarker>
-        );
-      })}
-    </MapContainer>
+          return (
+            <CircleMarker
+              key={i}
+              center={coords}
+              radius={getRadius(e.severity)}   // A11.5
+              fillColor={getColor(e.severity)}
+              fillOpacity={0.85}
+              color="#000"
+              weight={1}
+            >
+              <Popup>
+                <strong>{e.ip}</strong><br />
+                Country: {e.country}<br />
+                Confidence: {e.confidence}<br />
+                Severity: {e.severity}<br />
+                Last Seen: {new Date(e.lastSeen).toUTCString()}
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+      </MapContainer>
+
+      {/* A11.2 — Legend */}
+      <div
+        style={{
+          marginTop: 8,
+          fontSize: 13,
+          display: "flex",
+          gap: 16,
+        }}
+      >
+        <span style={{ color: "#ff2b2b" }}>● Critical</span>
+        <span style={{ color: "#ff8c00" }}>● High</span>
+        <span style={{ color: "#ffd700" }}>● Medium</span>
+      </div>
+    </div>
   );
 }
