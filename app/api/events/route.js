@@ -1,5 +1,8 @@
 // app/api/events/route.js
 
+import fs from "fs";
+import path from "path";
+
 let cache = {
   data: null,
   lastFetch: 0,
@@ -7,18 +10,30 @@ let cache = {
 
 const CACHE_TTL = 60 * 1000; // 1 minute
 
+function loadSampleData() {
+  const filePath = path.join(
+    process.cwd(),
+    "app",
+    "data",
+    "sample_events.json"
+  );
+  const raw = fs.readFileSync(filePath, "utf8");
+  return JSON.parse(raw);
+}
+
 export async function GET() {
   const now = Date.now();
 
-  // ✅ Serve cache if still valid
+  // 1️⃣ Serve hot cache
   if (cache.data && now - cache.lastFetch < CACHE_TTL) {
     return Response.json({
       events: cache.data,
       lastUpdated: cache.lastFetch,
-      source: "cache",
+      source: "memory-cache",
     });
   }
 
+  // 2️⃣ Try live AbuseIPDB
   try {
     const res = await fetch(
       "https://api.abuseipdb.com/api/v2/blacklist?confidenceMinimum=90",
@@ -31,7 +46,7 @@ export async function GET() {
     );
 
     if (!res.ok) {
-      throw new Error("AbuseIPDB rate limit or error");
+      throw new Error("AbuseIPDB error");
     }
 
     const json = await res.json();
@@ -60,18 +75,20 @@ export async function GET() {
       source: "abuseipdb",
     });
   } catch (err) {
-    // ✅ Fallback to stale cache instead of failing UI
-    if (cache.data) {
-      return Response.json({
-        events: cache.data,
-        lastUpdated: cache.lastFetch,
-        source: "stale-cache",
-      });
-    }
+    // 3️⃣ Fallback to disk sample (BOOTSTRAP MODE)
+    try {
+      const sample = loadSampleData();
 
-    return Response.json(
-      { status: "error", message: "Threat feed fetch failed" },
-      { status: 503 }
-    );
+      return Response.json({
+        events: sample,
+        lastUpdated: now,
+        source: "sample-data",
+      });
+    } catch {
+      return Response.json(
+        { status: "error", message: "Threat feed fetch failed" },
+        { status: 503 }
+      );
+    }
   }
 }
