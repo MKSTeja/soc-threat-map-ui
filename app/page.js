@@ -1,10 +1,15 @@
 // app/page.js (SERVER COMPONENT)
 
+import dynamic from "next/dynamic";
 import ThreatTable from "./components/ThreatTable";
-import ThreatMap from "./components/ThreatMap";
 import FeedHealth from "./components/FeedHealth";
 
 export const dynamic = "force-dynamic";
+
+const ThreatMap = dynamic(
+  () => import("./components/ThreatMap"),
+  { ssr: false }
+);
 
 export default async function Home() {
   const res = await fetch(
@@ -30,3 +35,4 @@ export default async function Home() {
     </main>
   );
 }
+
