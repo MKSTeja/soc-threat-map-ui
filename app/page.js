@@ -12,26 +12,28 @@ const ThreatMap = nextDynamic(
 );
 
 export default async function Home() {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/events`,
-    { cache: "no-store" }
-  );
+  const res = await fetch("http://localhost:3000/api/events", {
+    cache: "no-store",
+  });
 
   if (!res.ok) {
     throw new Error("Failed to load threat feed");
   }
 
-  const { events, lastUpdated, status } = await res.json();
+  const data = await res.json();
 
   return (
     <main style={{ padding: 24, fontFamily: "monospace" }}>
       <h1>🌐 Global Threat Map</h1>
       <p>Live abuse intelligence feed (MVP)</p>
 
-      <FeedHealth lastUpdated={lastUpdated} status={status} />
+      <FeedHealth
+        lastUpdated={data.lastUpdated}
+        status={data.status}
+      />
 
-      <ThreatMap events={events} />
-      <ThreatTable events={events} />
+      <ThreatMap events={data.events} />
+      <ThreatTable events={data.events} />
     </main>
   );
 }
