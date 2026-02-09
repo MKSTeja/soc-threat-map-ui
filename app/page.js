@@ -1,6 +1,7 @@
 // app/page.js (SERVER COMPONENT)
 
 import nextDynamic from "next/dynamic";
+import FeedHealth from "./components/FeedHealth"; // ✅ ADD
 
 export const dynamic = "force-dynamic";
 
@@ -42,22 +43,24 @@ export default async function Home() {
     );
   }
 
+  // ✅ SAFE normalization (unchanged)
   const events = Array.isArray(payload)
     ? payload
     : payload.events ?? [];
 
   const lastUpdated = payload.lastUpdated ?? null;
+  const source = payload.source ?? "unknown"; // ✅ ADD (safe default)
 
   return (
     <main style={{ padding: 24, fontFamily: "monospace" }}>
       <h1>🌐 Global Threat Map</h1>
       <p>Live abuse intelligence feed (MVP)</p>
 
-      {lastUpdated && (
-        <p style={{ opacity: 0.7 }}>
-          Last refreshed: {new Date(lastUpdated).toUTCString()}
-        </p>
-      )}
+      {/* ✅ ADD: Feed health banner */}
+      <FeedHealth
+        lastUpdated={lastUpdated}
+        source={source}
+      />
 
       <ThreatMap events={events} />
       <ThreatTable events={events} />
