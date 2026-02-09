@@ -2,6 +2,7 @@
 
 import ThreatTable from "./components/ThreatTable";
 import ThreatMap from "./components/ThreatMap";
+import FeedHealth from "./components/FeedHealth";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,6 @@ export default async function Home() {
       <h1>🌐 Global Threat Map</h1>
       <p>Live abuse intelligence feed (MVP)</p>
 
-      {/* Feed health bar */}
       <FeedHealth lastUpdated={lastUpdated} status={status} />
 
       <ThreatMap events={events} />
@@ -30,4 +30,3 @@ export default async function Home() {
     </main>
   );
 }
-
