@@ -1,16 +1,71 @@
+// app/api/events/route.js
+
+// --------------------
+// In-memory cache
+// --------------------
 let cache = {
   data: null,
   lastFetch: 0,
 };
 
 const CACHE_TTL = 60 * 1000; // 1 minute
+
+// --------------------
+// Rate limiting
+// --------------------
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS = 30; // per IP per window
+
+const rateLimitMap = new Map();
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+
+  if (!record) {
+    rateLimitMap.set(ip, { count: 1, start: now });
+    return false;
+  }
+
+  if (now - record.start > RATE_LIMIT_WINDOW) {
+    rateLimitMap.set(ip, { count: 1, start: now });
+    return false;
+  }
+
+  record.count += 1;
+  return record.count > MAX_REQUESTS;
+}
+
+// --------------------
+// AbuseIPDB config
+// --------------------
 const ABUSE_URL =
   "https://api.abuseipdb.com/api/v2/blacklist?confidenceMinimum=90&limit=100";
 
-export async function GET() {
+// --------------------
+// API handler
+// --------------------
+export async function GET(req) {
   const now = Date.now();
 
-  // 1️⃣ Serve cached data if still valid
+  // Get client IP (Vercel-safe)
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+
+  // Rate limit protection
+  if (isRateLimited(ip)) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests" }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  }
+
+  // Serve cache if valid
   if (cache.data && now - cache.lastFetch < CACHE_TTL) {
     return Response.json(cache.data, {
       headers: {
@@ -19,7 +74,7 @@ export async function GET() {
     });
   }
 
-  // 2️⃣ Fail fast if API key is missing
+  // Ensure API key exists
   if (!process.env.ABUSEIPDB_API_KEY) {
     return new Response("Missing AbuseIPDB API key", { status: 500 });
   }
@@ -30,10 +85,10 @@ export async function GET() {
         Key: process.env.ABUSEIPDB_API_KEY,
         Accept: "application/json",
       },
-      next: { revalidate: 60 }, // Next.js edge hint
+      next: { revalidate: 60 },
     });
 
-    // 3️⃣ Graceful fallback if AbuseIPDB is down
+    // If AbuseIPDB fails, return cached data if possible
     if (!res.ok) {
       if (cache.data) {
         return Response.json(cache.data);
@@ -43,7 +98,7 @@ export async function GET() {
 
     const json = await res.json();
 
-    // 4️⃣ Normalize for frontend stability
+    // Normalize for frontend
     const normalized = json.data.map((e) => ({
       ip: e.ipAddress ?? "unknown",
       country: e.countryCode ?? "NA",
@@ -57,7 +112,7 @@ export async function GET() {
           : "medium",
     }));
 
-    // 5️⃣ Update cache
+    // Update cache
     cache = {
       data: normalized,
       lastFetch: now,
@@ -69,7 +124,7 @@ export async function GET() {
       },
     });
   } catch (err) {
-    // 6️⃣ Absolute last-resort safety net
+    // Absolute fallback
     if (cache.data) {
       return Response.json(cache.data);
     }
