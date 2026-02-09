@@ -5,6 +5,7 @@ export default function Home() {
     <main style={{ padding: 24, fontFamily: "monospace" }}>
       <h1>🌐 Global Threat Map</h1>
       <p>Live abuse intelligence feed (MVP)</p>
+      <p style={{ color: "#58a6ff" }}>● Live Feed (auto-refresh 15s)</p>
 
       <ThreatMap />
     </main>
