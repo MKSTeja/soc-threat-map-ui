@@ -1,9 +1,11 @@
 "use client";
 
-export default function FeedHealth({ lastUpdated, status }) {
+export default function FeedHealth({ lastUpdated, source }) {
   if (!lastUpdated) return null;
 
-  const ageSeconds = Math.floor((Date.now() - lastUpdated) / 1000);
+  const ageSeconds = Math.floor(
+    (Date.now() - new Date(lastUpdated).getTime()) / 1000
+  );
 
   let label = "LIVE";
   let color = "#16a34a"; // green
@@ -15,6 +17,11 @@ export default function FeedHealth({ lastUpdated, status }) {
     label = "DELAYED";
     color = "#f97316"; // orange
   }
+
+  const sourceLabel =
+    source === "abuseipdb"
+      ? "AbuseIPDB (primary)"
+      : "Local fallback feed";
 
   return (
     <div
@@ -33,6 +40,10 @@ export default function FeedHealth({ lastUpdated, status }) {
       <span>
         🩺 Feed Status:{" "}
         <strong style={{ color }}>{label}</strong>
+        {" · "}
+        <span style={{ opacity: 0.7 }}>
+          {sourceLabel}
+        </span>
       </span>
 
       <span>
