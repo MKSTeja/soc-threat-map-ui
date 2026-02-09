@@ -2,6 +2,7 @@
 
 import nextDynamic from "next/dynamic";
 
+// Force runtime fetch (no static caching)
 export const dynamic = "force-dynamic";
 
 // Client-only components (Leaflet MUST be client-side)
@@ -19,12 +20,8 @@ export default async function Home() {
   let payload;
 
   try {
-    const baseUrl =
-      process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : "http://localhost:3000";
-
-    const res = await fetch(`${baseUrl}/api/events`, {
+    // IMPORTANT: use relative URL in App Router
+    const res = await fetch("/api/events", {
       cache: "no-store",
     });
 
@@ -42,8 +39,8 @@ export default async function Home() {
     );
   }
 
-  // Support both:
-  // 1) array response
+  // Support both response formats:
+  // 1) array
   // 2) { events, lastUpdated }
   const events = Array.isArray(payload)
     ? payload
