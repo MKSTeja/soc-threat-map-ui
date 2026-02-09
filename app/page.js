@@ -1,12 +1,12 @@
 // app/page.js (SERVER COMPONENT)
 
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import ThreatTable from "./components/ThreatTable";
 import FeedHealth from "./components/FeedHealth";
 
 export const dynamic = "force-dynamic";
 
-const ThreatMap = dynamic(
+const ThreatMap = nextDynamic(
   () => import("./components/ThreatMap"),
   { ssr: false }
 );
@@ -35,4 +35,5 @@ export default async function Home() {
     </main>
   );
 }
+
 
