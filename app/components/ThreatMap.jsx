@@ -28,6 +28,27 @@ function getRadius(severity) {
 }
 
 export default function ThreatMap({ events }) {
+  // FIX 1 — Empty-state handling
+  if (!events || events.length === 0) {
+    return (
+      <div
+        style={{
+          height: 420,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 12,
+          background: "#020617",
+          color: "#94a3b8",
+          fontFamily: "monospace",
+          marginBottom: 24,
+        }}
+      >
+        No threat data available (feed idle or rate-limited)
+      </div>
+    );
+  }
+
   return (
     <div style={{ marginBottom: 24 }}>
       <MapContainer
@@ -41,14 +62,17 @@ export default function ThreatMap({ events }) {
         />
 
         {events.map((e, i) => {
-          const coords = COUNTRY_COORDS[e.country];
+          // FIX 2 — Normalize country codes
+          const coords =
+            COUNTRY_COORDS[e.country?.toUpperCase()];
+
           if (!coords) return null;
 
           return (
             <CircleMarker
               key={i}
               center={coords}
-              radius={getRadius(e.severity)}   // A11.5
+              radius={getRadius(e.severity)}
               fillColor={getColor(e.severity)}
               fillOpacity={0.85}
               color="#000"
