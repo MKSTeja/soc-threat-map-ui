@@ -1,5 +1,6 @@
 // app/page.js (SERVER COMPONENT)
 
+import ThreatMap from "./components/ThreatMap";
 import ThreatTable from "./components/ThreatTable";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +18,21 @@ export default async function Home() {
   const events = await res.json();
 
   return (
-    <main style={{ padding: 24, fontFamily: "monospace" }}>
+    <main
+      style={{
+        padding: 24,
+        fontFamily: "monospace",
+        maxWidth: 1400,
+        margin: "0 auto",
+      }}
+    >
       <h1>🌐 Global Threat Map</h1>
       <p>Live abuse intelligence feed (MVP)</p>
 
+      {/* A10: MAP (CDN-BASED, NO INSTALLS) */}
+      <ThreatMap events={events} />
+
+      {/* Existing Table */}
       <ThreatTable events={events} />
     </main>
   );
