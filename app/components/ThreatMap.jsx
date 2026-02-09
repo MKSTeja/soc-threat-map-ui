@@ -1,47 +1,70 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+
+const COUNTRY_COORDS = {
+  DE: [51.1657, 10.4515],
+  RO: [45.9432, 24.9668],
+  NL: [52.1326, 5.2913],
+  US: [37.0902, -95.7129],
+  CN: [35.8617, 104.1954],
+  RU: [61.5240, 105.3188],
+  IN: [20.5937, 78.9629],
+};
 
 export default function ThreatMap({ events }) {
-  const mapRef = useRef(null);
-
   useEffect(() => {
-    if (!window.L || mapRef.current) return;
+    if (!window.L) return;
 
-    const L = window.L;
+    const map = window.L.map("map").setView([20, 0], 2);
 
-    const map = L.map("threat-map").setView([20, 0], 2);
-    mapRef.current = map;
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap contributors",
-    }).addTo(map);
+    window.L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        attribution: "© OpenStreetMap contributors",
+      }
+    ).addTo(map);
 
     events.forEach((e) => {
-      if (!e.lat || !e.lon) return;
+      const coords = COUNTRY_COORDS[e.country];
 
-      L.circleMarker([e.lat, e.lon], {
-        radius: 6,
-        color: e.severity === "high" ? "red" : "orange",
+      if (!coords) return;
+
+      const color =
+        e.severity === "critical"
+          ? "red"
+          : e.severity === "high"
+          ? "orange"
+          : "yellow";
+
+      window.L.circleMarker(coords, {
+        radius: 8,
+        color,
+        fillColor: color,
         fillOpacity: 0.7,
       })
         .addTo(map)
         .bindPopup(
-          `<strong>IP:</strong> ${e.ip}<br/>
-           <strong>Country:</strong> ${e.country}<br/>
-           <strong>Confidence:</strong> ${e.confidence}`
+          `<b>IP:</b> ${e.ip}<br/>
+           <b>Country:</b> ${e.country}<br/>
+           <b>Confidence:</b> ${e.confidence}`
         );
     });
+
+    return () => {
+      map.remove();
+    };
   }, [events]);
 
   return (
     <div
-      id="threat-map"
+      id="map"
       style={{
-        height: "500px",
+        height: "450px",
         width: "100%",
-        marginTop: "20px",
+        marginBottom: "24px",
         borderRadius: "8px",
+        overflow: "hidden",
       }}
     />
   );
