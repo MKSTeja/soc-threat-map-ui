@@ -12,9 +12,13 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         />
-      </head>
 
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        {/* Leaflet JS */}
+        <script
+          src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          defer
+        ></script>
+      </head>
 
       <body
         style={{
@@ -25,9 +29,6 @@ export default function RootLayout({ children }) {
         }}
       >
         {children}
-
-        {/* Leaflet JS */}
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
       </body>
     </html>
   );
