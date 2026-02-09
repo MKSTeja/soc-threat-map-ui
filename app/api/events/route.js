@@ -1,71 +1,77 @@
 // app/api/events/route.js
 
-import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+let cache = {
+  data: null,
+  lastFetch: 0,
+};
 
-export const dynamic = "force-dynamic";
+const CACHE_TTL = 60 * 1000; // 1 minute
 
 export async function GET() {
-  const apiKey = process.env.ABUSEIPDB_API_KEY;
-  const now = new Date().toISOString();
+  const now = Date.now();
+
+  // ✅ Serve cache if still valid
+  if (cache.data && now - cache.lastFetch < CACHE_TTL) {
+    return Response.json({
+      events: cache.data,
+      lastUpdated: cache.lastFetch,
+      source: "cache",
+    });
+  }
 
   try {
-    if (!apiKey) {
-      throw new Error("Missing AbuseIPDB API key");
-    }
-
     const res = await fetch(
       "https://api.abuseipdb.com/api/v2/blacklist?confidenceMinimum=90",
       {
         headers: {
-          Key: apiKey,
+          Key: process.env.ABUSEIPDB_API_KEY,
           Accept: "application/json",
         },
-        cache: "no-store",
       }
     );
 
     if (!res.ok) {
-      throw new Error(`AbuseIPDB blocked (${res.status})`);
+      throw new Error("AbuseIPDB rate limit or error");
     }
 
     const json = await res.json();
 
-    const events = json.data.slice(0, 25).map((e) => ({
+    const normalized = json.data.map((e) => ({
       ip: e.ipAddress,
       country: e.countryCode,
       confidence: e.abuseConfidenceScore,
+      lastSeen: e.lastReportedAt,
       severity:
-        e.abuseConfidenceScore >= 90
+        e.abuseConfidenceScore > 90
           ? "critical"
-          : e.abuseConfidenceScore >= 70
+          : e.abuseConfidenceScore > 70
           ? "high"
           : "medium",
-      lastSeen: e.lastReportedAt,
     }));
 
-    return NextResponse.json({
-      source: "abuseipdb",
+    cache = {
+      data: normalized,
+      lastFetch: now,
+    };
+
+    return Response.json({
+      events: normalized,
       lastUpdated: now,
-      events,
+      source: "abuseipdb",
     });
   } catch (err) {
-    // 🔁 Fallback to local dataset
-    const filePath = path.join(
-      process.cwd(),
-      "app/data/sample_events.json"
+    // ✅ Fallback to stale cache instead of failing UI
+    if (cache.data) {
+      return Response.json({
+        events: cache.data,
+        lastUpdated: cache.lastFetch,
+        source: "stale-cache",
+      });
+    }
+
+    return Response.json(
+      { status: "error", message: "Threat feed fetch failed" },
+      { status: 503 }
     );
-
-    const raw = fs.readFileSync(filePath, "utf-8");
-    const events = JSON.parse(raw);
-
-    return NextResponse.json({
-      source: "fallback",
-      reason: err.message,
-      lastUpdated: now,
-      events,
-    });
   }
 }
-
