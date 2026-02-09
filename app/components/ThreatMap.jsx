@@ -1,65 +1,47 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function ThreatMap({ events }) {
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const mapRef = useRef(null);
 
-    // Prevent map re-init on refresh
-    if (window._threatMapInitialized) return;
-    window._threatMapInitialized = true;
+  useEffect(() => {
+    if (!window.L || mapRef.current) return;
 
     const L = window.L;
 
-    const map = L.map("map", {
-      center: [20, 0],
-      zoom: 2,
-      minZoom: 2,
-      worldCopyJump: true,
-    });
+    const map = L.map("threat-map").setView([20, 0], 2);
+    mapRef.current = map;
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors",
+      attribution: "© OpenStreetMap contributors",
     }).addTo(map);
 
     events.forEach((e) => {
       if (!e.lat || !e.lon) return;
 
-      const color =
-        e.confidence >= 80
-          ? "red"
-          : e.confidence >= 50
-          ? "orange"
-          : "yellow";
-
       L.circleMarker([e.lat, e.lon], {
         radius: 6,
-        color,
-        fillOpacity: 0.8,
+        color: e.severity === "high" ? "red" : "orange",
+        fillOpacity: 0.7,
       })
         .addTo(map)
         .bindPopup(
-          `<b>IP:</b> ${e.ip}<br/>
-           <b>Country:</b> ${e.country}<br/>
-           <b>Confidence:</b> ${e.confidence}`
+          `<strong>IP:</strong> ${e.ip}<br/>
+           <strong>Country:</strong> ${e.country}<br/>
+           <strong>Confidence:</strong> ${e.confidence}`
         );
     });
-
-    return () => {
-      map.remove();
-      window._threatMapInitialized = false;
-    };
   }, [events]);
 
   return (
     <div
-      id="map"
+      id="threat-map"
       style={{
-        height: "420px",
+        height: "500px",
         width: "100%",
-        borderRadius: "12px",
-        marginBottom: "24px",
+        marginTop: "20px",
+        borderRadius: "8px",
       }}
     />
   );
