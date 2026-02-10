@@ -4,6 +4,7 @@ import nextDynamic from "next/dynamic";
 
 export const dynamic = "force-dynamic";
 
+// Client-only components
 const ThreatMap = nextDynamic(
   () => import("./components/ThreatMap"),
   { ssr: false }
@@ -15,24 +16,33 @@ const ThreatTable = nextDynamic(
 );
 
 export default async function Home() {
-  let payload = { events: [], lastUpdated: null };
+  let payload;
 
   try {
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000";
-
-    const res = await fetch(`${baseUrl}/api/events`, {
+    // ✅ Correct internal API call (App Router safe)
+    const res = await fetch("/api/events", {
       cache: "no-store",
     });
 
-    // ⚠️ DO NOT throw here
+    if (!res.ok) {
+      throw new Error("Threat feed API failed");
+    }
+
     payload = await res.json();
-  } catch {
-    // fallback already handled by API
+  } catch (err) {
+    return (
+      <main style={{ padding: 24, fontFamily: "monospace" }}>
+        <h1>⚠️ Threat Feed Error</h1>
+        <pre>{err.message}</pre>
+      </main>
+    );
   }
 
-  const events = payload.events ?? [];
+  // Support both response shapes
+  const events = Array.isArray(payload)
+    ? payload
+    : payload.events ?? [];
+
   const lastUpdated = payload.lastUpdated ?? null;
 
   return (
