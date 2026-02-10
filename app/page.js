@@ -20,7 +20,7 @@ export default async function Home() {
 
   try {
     // ✅ Correct internal API call (App Router safe)
-    const res = await fetch("/api/events", {
+    const res = await fetch("/api/events"), {
       cache: "no-store",
     });
 
