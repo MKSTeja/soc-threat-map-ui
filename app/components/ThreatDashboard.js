@@ -5,6 +5,7 @@ import ThreatMap from "./ThreatMap";
 import ThreatTable from "./ThreatTable";
 
 const SEVERITIES = ["all", "critical", "high", "medium"];
+const AGGREGATIONS = ["all", "ip", "country"];
 
 export default function ThreatDashboard({
   events,
@@ -13,36 +14,59 @@ export default function ThreatDashboard({
   source,
 }) {
   const [severityFilter, setSeverityFilter] = useState("all");
-  const [countryFilter, setCountryFilter] = useState("");
-  const [ipFilter, setIpFilter] = useState("");
+  const [aggregationMode, setAggregationMode] = useState("all");
 
-  // 1️⃣ Raw events (never mutated)
-  const rawEvents = Array.isArray(events) ? events : [];
+  /**
+   * 1️⃣ Normalize raw events ONCE
+   * UI never guesses field names again
+   */
+  const normalizedEvents = useMemo(() => {
+    if (!Array.isArray(events)) return [];
 
-  // 2️⃣ Filtered events (map + stats)
-  const filteredEvents = useMemo(() => {
-    return rawEvents.filter((e) => {
-      if (
-        severityFilter !== "all" &&
-        e.severity !== severityFilter
-      ) {
-        return false;
+    return events.map((e) => ({
+      ip: e.ip ?? e.ipAddress ?? e.source_ip ?? null,
+      country: e.country ?? e.countryCode ?? null,
+      severity: e.severity ?? "medium",
+      confidence: e.confidence ?? null,
+      lastSeen: e.lastSeen ?? e.last_seen ?? null,
+    }));
+  }, [events]);
+
+  /**
+   * 2️⃣ Severity filter
+   */
+  const severityFiltered = useMemo(() => {
+    if (severityFilter === "all") return normalizedEvents;
+    return normalizedEvents.filter(
+      (e) => e.severity === severityFilter
+    );
+  }, [normalizedEvents, severityFilter]);
+
+  /**
+   * 3️⃣ Aggregation
+   */
+  const aggregatedEvents = useMemo(() => {
+    if (aggregationMode === "all") {
+      return severityFiltered;
+    }
+
+    const map = new Map();
+
+    for (const e of severityFiltered) {
+      const key =
+        aggregationMode === "ip" ? e.ip : e.country;
+
+      if (!key) continue;
+
+      if (!map.has(key)) {
+        map.set(key, { ...e, count: 1 });
+      } else {
+        map.get(key).count += 1;
       }
+    }
 
-      if (
-        countryFilter &&
-        e.country?.toLowerCase() !== countryFilter.toLowerCase()
-      ) {
-        return false;
-      }
-
-      if (ipFilter && !e.ip?.includes(ipFilter)) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [rawEvents, severityFilter, countryFilter, ipFilter]);
+    return Array.from(map.values());
+  }, [severityFiltered, aggregationMode]);
 
   return (
     <main
@@ -62,98 +86,82 @@ export default function ThreatDashboard({
           borderBottom: "1px solid #1e293b",
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-end",
         }}
       >
         <div>
           <h1 style={{ fontSize: 22, margin: 0 }}>
             🌐 Global Threat Intelligence Dashboard
           </h1>
-          <p style={{ margin: "4px 0", opacity: 0.7 }}>
+          <p style={{ opacity: 0.7 }}>
             Live abuse intelligence feed (SOC MVP)
           </p>
         </div>
 
-        <div style={{ textAlign: "right", fontSize: 12, opacity: 0.6 }}>
-          <div>
-            Source: <strong>{source}</strong>
-          </div>
-          <div>
-            Status: <span style={{ color: "#22c55e" }}>LIVE</span>
-          </div>
+        <div style={{ fontSize: 12, opacity: 0.7 }}>
+          <div>Source: {source}</div>
+          <div>Status: <span style={{ color: "#22c55e" }}>LIVE</span></div>
           {lastUpdated && (
-            <div>
-              Updated: {new Date(lastUpdated).toUTCString()}
-            </div>
+            <div>{new Date(lastUpdated).toUTCString()}</div>
           )}
         </div>
       </header>
 
-      {/* ================= FILTER BAR ================= */}
+      {/* ================= FILTERS ================= */}
       <section style={{ marginBottom: 16 }}>
         {/* Severity */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
           {SEVERITIES.map((s) => (
             <button
               key={s}
               onClick={() => setSeverityFilter(s)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 6,
-                border: "1px solid #334155",
-                background:
-                  severityFilter === s ? "#0f172a" : "transparent",
-                color: "#e5e7eb",
-                cursor: "pointer",
-                fontSize: 12,
-              }}
+              style={buttonStyle(severityFilter === s)}
             >
               {s.toUpperCase()}
             </button>
           ))}
         </div>
 
-        {/* IP + Country */}
-        <div style={{ display: "flex", gap: 12 }}>
-          <input
-            placeholder="Filter by IP"
-            value={ipFilter}
-            onChange={(e) => setIpFilter(e.target.value)}
-            style={{
-              padding: 6,
-              background: "#020617",
-              border: "1px solid #334155",
-              color: "#e5e7eb",
-            }}
-          />
-
-          <input
-            placeholder="Filter by Country (US, IN, DE)"
-            value={countryFilter}
-            onChange={(e) => setCountryFilter(e.target.value)}
-            style={{
-              padding: 6,
-              background: "#020617",
-              border: "1px solid #334155",
-              color: "#e5e7eb",
-            }}
-          />
+        {/* Aggregation */}
+        <div style={{ display: "flex", gap: 8 }}>
+          {AGGREGATIONS.map((a) => (
+            <button
+              key={a}
+              onClick={() => setAggregationMode(a)}
+              style={buttonStyle(aggregationMode === a)}
+            >
+              AGG BY {a.toUpperCase()}
+            </button>
+          ))}
         </div>
 
         <p style={{ opacity: 0.7, marginTop: 8 }}>
-          Showing {filteredEvents.length} of {rawEvents.length} threats
+          Showing {aggregatedEvents.length} items
         </p>
       </section>
 
       {/* ================= MAP ================= */}
-      <section style={{ marginBottom: 24 }}>
-        <ThreatMap events={filteredEvents} />
-      </section>
+      <ThreatMap
+        events={aggregatedEvents}
+        aggregationMode={aggregationMode}
+      />
 
       {/* ================= TABLE ================= */}
-      <section>
-        <ThreatTable events={rawEvents} />
-      </section>
+      <ThreatTable
+        events={aggregatedEvents}
+        aggregationMode={aggregationMode}
+      />
     </main>
   );
+}
+
+function buttonStyle(active) {
+  return {
+    padding: "6px 12px",
+    borderRadius: 6,
+    border: "1px solid #334155",
+    background: active ? "#0f172a" : "transparent",
+    color: "#e5e7eb",
+    cursor: "pointer",
+    fontSize: 12,
+  };
 }
