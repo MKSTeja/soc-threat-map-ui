@@ -1,56 +1,24 @@
 // app/page.js (SERVER COMPONENT)
 
-import nextDynamic from "next/dynamic";
-import { headers } from "next/headers";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 
-// Client-only components
-const ThreatMap = nextDynamic(
-  () => import("./components/ThreatMap"),
-  { ssr: false }
-);
+const ThreatMap = dynamic(() => import("./components/ThreatMap"), {
+  ssr: false,
+});
+const ThreatTable = dynamic(() => import("./components/ThreatTable"), {
+  ssr: false,
+});
 
-const ThreatTable = nextDynamic(
-  () => import("./components/ThreatTable"),
-  { ssr: false }
-);
+export default function HomeClient({ events, lastUpdated }) {
+  const [severityFilter, setSeverityFilter] = useState("all");
 
-export default async function Home() {
-  let payload;
-
-  try {
-    // ✅ Build absolute URL (REQUIRED on server)
-    const hdrs = headers();
-    const host = hdrs.get("host");
-    const protocol = process.env.NODE_ENV === "development"
-      ? "http"
-      : "https";
-
-    const res = await fetch(`${protocol}://${host}/api/events`, {
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      throw new Error("Threat feed API failed");
-    }
-
-    payload = await res.json();
-  } catch (err) {
-    return (
-      <main style={{ padding: 24, fontFamily: "monospace" }}>
-        <h1>⚠️ Threat Feed Error</h1>
-        <pre>{err.message}</pre>
-      </main>
-    );
-  }
-
-  // Support both response shapes
-  const events = Array.isArray(payload)
-    ? payload
-    : payload.events ?? [];
-
-  const lastUpdated = payload.lastUpdated ?? null;
+  const filteredEvents = useMemo(() => {
+    if (severityFilter === "all") return events;
+    return events.filter((e) => e.severity === severityFilter);
+  }, [events, severityFilter]);
 
   return (
     <main style={{ padding: 24, fontFamily: "monospace" }}>
@@ -63,8 +31,29 @@ export default async function Home() {
         </p>
       )}
 
-      <ThreatMap events={events} />
-      <ThreatTable events={events} />
+      {/* 🔎 SOC Filter Bar */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+        {["all", "critical", "high", "medium"].map((level) => (
+          <button
+            key={level}
+            onClick={() => setSeverityFilter(level)}
+            style={{
+              padding: "6px 12px",
+              borderRadius: 6,
+              border: "1px solid #334155",
+              background:
+                severityFilter === level ? "#1e293b" : "#020617",
+              color: "#e5e7eb",
+              cursor: "pointer",
+            }}
+          >
+            {level.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      <ThreatMap events={filteredEvents} />
+      <ThreatTable events={filteredEvents} />
     </main>
   );
 }
