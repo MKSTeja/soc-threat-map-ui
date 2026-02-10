@@ -2,24 +2,11 @@
 
 export default function ThreatTable({ events }) {
   if (!Array.isArray(events) || events.length === 0) {
-    return (
-      <p style={{ fontFamily: "monospace", opacity: 0.7 }}>
-        Loading threat data…
-      </p>
-    );
+    return <p style={{ opacity: 0.6 }}>No matching threats</p>;
   }
 
   return (
-    <table
-      border="1"
-      cellPadding="8"
-      width="100%"
-      style={{
-        marginTop: 24,
-        borderCollapse: "collapse",
-        fontFamily: "monospace",
-      }}
-    >
+    <table border="1" cellPadding="8" width="100%">
       <thead>
         <tr>
           <th>IP</th>
