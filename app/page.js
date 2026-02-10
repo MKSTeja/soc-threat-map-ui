@@ -11,7 +11,13 @@ export default async function Home() {
   try {
     const headersList = headers();
     const host = headersList.get("host");
-    const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+
+    if (!host) {
+      throw new Error("Host header missing");
+    }
+
+    const protocol =
+      process.env.NODE_ENV === "development" ? "http" : "https";
 
     const apiUrl = `${protocol}://${host}/api/events`;
 
@@ -20,7 +26,7 @@ export default async function Home() {
     });
 
     if (!res.ok) {
-      throw new Error("Threat feed API failed");
+      throw new Error(`Threat feed API failed (${res.status})`);
     }
 
     payload = await res.json();
@@ -28,14 +34,13 @@ export default async function Home() {
     return (
       <main style={{ padding: 24, fontFamily: "monospace" }}>
         <h1>⚠️ Threat Feed Error</h1>
-        <pre>{err.message}</pre>
+        <pre>{String(err.message)}</pre>
       </main>
     );
   }
 
   /**
-   * DO NOT reshape data here.
-   * Treat API response as a contract.
+   * API contract — DO NOT reshape
    */
   const {
     events = [],
@@ -46,8 +51,8 @@ export default async function Home() {
 
   return (
     <ThreatDashboard
-      events={events}           // raw events → table
-      geoSummary={geoSummary}   // aggregated → map
+      events={events}
+      geoSummary={geoSummary}
       lastUpdated={lastUpdated}
       source={source}
     />
