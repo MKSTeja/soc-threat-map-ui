@@ -21,6 +21,29 @@ function loadSampleData() {
   return JSON.parse(raw);
 }
 
+/**
+ * 🔒 Single source of truth for normalization
+ */
+function normalizeEvent(e) {
+  const confidence =
+    e.abuseConfidenceScore ??
+    e.confidence ??
+    0;
+
+  return {
+    ip: e.ipAddress ?? e.ip ?? null,
+    country: e.countryCode ?? e.country ?? null,
+    confidence,
+    lastSeen: e.lastReportedAt ?? e.lastSeen ?? null,
+    severity:
+      confidence > 90
+        ? "critical"
+        : confidence > 70
+        ? "high"
+        : "medium",
+  };
+}
+
 export async function GET() {
   const now = Date.now();
 
@@ -51,18 +74,7 @@ export async function GET() {
 
     const json = await res.json();
 
-    const normalized = json.data.map((e) => ({
-      ip: e.ipAddress,
-      country: e.countryCode,
-      confidence: e.abuseConfidenceScore,
-      lastSeen: e.lastReportedAt,
-      severity:
-        e.abuseConfidenceScore > 90
-          ? "critical"
-          : e.abuseConfidenceScore > 70
-          ? "high"
-          : "medium",
-    }));
+    const normalized = json.data.map(normalizeEvent);
 
     cache = {
       data: normalized,
@@ -77,10 +89,16 @@ export async function GET() {
   } catch (err) {
     // 3️⃣ Fallback to disk sample (BOOTSTRAP MODE)
     try {
-      const sample = loadSampleData();
+      const sampleRaw = loadSampleData();
+      const normalizedSample = sampleRaw.map(normalizeEvent);
+
+      cache = {
+        data: normalizedSample,
+        lastFetch: now,
+      };
 
       return Response.json({
-        events: sample,
+        events: normalizedSample,
         lastUpdated: now,
         source: "sample-data",
       });
