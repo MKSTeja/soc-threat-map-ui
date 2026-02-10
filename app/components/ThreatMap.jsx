@@ -5,7 +5,6 @@ import "leaflet/dist/leaflet.css";
 
 /**
  * Country centroids (ISO-2)
- * Extend as needed
  */
 const COUNTRY_COORDS = {
   DE: [51.1657, 10.4515],
@@ -18,27 +17,17 @@ const COUNTRY_COORDS = {
   IN: [20.5937, 78.9629],
 };
 
-/**
- * Normalize country input from feeds:
- * - "DE", "de", "DEU", "usa" → "DE", "US"
- */
 function normalizeCountry(code) {
   if (!code || typeof code !== "string") return null;
   return code.toUpperCase().slice(0, 2);
 }
 
-/**
- * Severity → color
- */
 function getColor(severity) {
   if (severity === "critical") return "#ff2b2b";
   if (severity === "high") return "#ff8c00";
   return "#ffd700";
 }
 
-/**
- * Severity → radius
- */
 function getRadius(severity) {
   if (severity === "critical") return 14;
   if (severity === "high") return 10;
@@ -46,12 +35,6 @@ function getRadius(severity) {
 }
 
 export default function ThreatMap({ events }) {
-  // Debug (safe to remove later)
-  console.log("ThreatMap received events:", events);
-
-  /**
-   * FIX 1 — Empty or missing feed
-   */
   if (!Array.isArray(events) || events.length === 0) {
     return (
       <div
@@ -85,9 +68,6 @@ export default function ThreatMap({ events }) {
         />
 
         {events.map((e, i) => {
-          /**
-           * FIX 2 — Country normalization + fallback
-           */
           const countryCode = normalizeCountry(
             e.country || e.countryCode
           );
@@ -124,7 +104,6 @@ export default function ThreatMap({ events }) {
         })}
       </MapContainer>
 
-      {/* Legend */}
       <div
         style={{
           marginTop: 8,
