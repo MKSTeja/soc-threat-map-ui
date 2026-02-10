@@ -1,6 +1,7 @@
 // app/page.js (SERVER COMPONENT)
 
 import nextDynamic from "next/dynamic";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +20,14 @@ export default async function Home() {
   let payload;
 
   try {
-    // ✅ Correct internal API call (App Router safe)
-    const res = await fetch("/api/events"), {
+    // ✅ Build absolute URL (REQUIRED on server)
+    const hdrs = headers();
+    const host = hdrs.get("host");
+    const protocol = process.env.NODE_ENV === "development"
+      ? "http"
+      : "https";
+
+    const res = await fetch(`${protocol}://${host}/api/events`, {
       cache: "no-store",
     });
 
