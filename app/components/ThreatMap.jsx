@@ -3,9 +3,6 @@
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
-/**
- * Country centroids (ISO-2)
- */
 const COUNTRY_COORDS = {
   DE: [51.1657, 10.4515],
   RO: [45.9432, 24.9668],
@@ -46,7 +43,6 @@ export default function ThreatMap({ events }) {
           borderRadius: 12,
           background: "#020617",
           color: "#94a3b8",
-          fontFamily: "monospace",
           marginBottom: 24,
         }}
       >
@@ -110,7 +106,6 @@ export default function ThreatMap({ events }) {
           fontSize: 13,
           display: "flex",
           gap: 16,
-          fontFamily: "monospace",
         }}
       >
         <span style={{ color: "#ff2b2b" }}>● Critical</span>
