@@ -4,11 +4,11 @@ import fs from "fs";
 import path from "path";
 
 let cache = {
-  rawEvents: null,
+  data: null,
   lastFetch: 0,
 };
 
-const CACHE_TTL = 60 * 1000; // 1 minute
+const CACHE_TTL = 60 * 1000; // 1 min
 
 function loadSampleData() {
   const filePath = path.join(process.cwd(), "app", "data", "sample_events.json");
@@ -16,10 +16,12 @@ function loadSampleData() {
 }
 
 /**
- * Country-level aggregation ONLY for map
+ * Aggregate for MAP only
+ * Table must always use raw events
  */
 function aggregateByCountry(events) {
   const map = {};
+  const rank = { medium: 1, high: 2, critical: 3 };
 
   for (const e of events) {
     if (!e.country || e.country === "unknown") continue;
@@ -28,44 +30,59 @@ function aggregateByCountry(events) {
       map[e.country] = {
         country: e.country,
         count: 0,
-        sumConfidence: 0,
         maxSeverity: e.severity,
       };
     }
 
-    map[e.country].count += 1;
-    map[e.country].sumConfidence += e.confidence;
+    map[e.country].count++;
 
-    const rank = { medium: 1, high: 2, critical: 3 };
     if (rank[e.severity] > rank[map[e.country].maxSeverity]) {
       map[e.country].maxSeverity = e.severity;
     }
   }
 
-  return Object.values(map).map((c) => ({
-    country: c.country,
-    count: c.count,
-    avgConfidence: Math.round(c.sumConfidence / c.count),
-    severity: c.maxSeverity,
-  }));
+  return Object.values(map);
+}
+
+function normalize(events) {
+  return events
+    .filter(e => e && (e.ipAddress || e.ip))
+    .map(e => ({
+      ip: e.ipAddress ?? e.ip ?? "unknown",
+      country: e.countryCode ?? "unknown",
+      confidence: e.abuseConfidenceScore ?? 0,
+      lastSeen: e.lastReportedAt ?? "unknown",
+      severity:
+        e.abuseConfidenceScore >= 90
+          ? "critical"
+          : e.abuseConfidenceScore >= 70
+          ? "high"
+          : "medium",
+    }));
 }
 
 export async function GET() {
   const now = Date.now();
 
   // 1️⃣ Serve hot cache
-  if (cache.rawEvents && now - cache.lastFetch < CACHE_TTL) {
+  if (cache.data && now - cache.lastFetch < CACHE_TTL) {
     return Response.json({
-      rawEvents: cache.rawEvents, // TABLE
+      // 🔙 legacy keys (UI expects these)
+      events: cache.data,
+      geoSummary: aggregateByCountry(cache.data),
+
+      // 🆕 new structured keys (future)
+      rawEvents: cache.data,
       aggregations: {
-        byCountry: aggregateByCountry(cache.rawEvents), // MAP
+        byCountry: aggregateByCountry(cache.data),
       },
+
       lastUpdated: cache.lastFetch,
       source: "memory-cache",
     });
   }
 
-  // 2️⃣ Try live AbuseIPDB
+  // 2️⃣ Live AbuseIPDB
   try {
     const res = await fetch(
       "https://api.abuseipdb.com/api/v2/blacklist?confidenceMinimum=30",
@@ -80,44 +97,43 @@ export async function GET() {
     if (!res.ok) throw new Error("AbuseIPDB error");
 
     const json = await res.json();
-
-    const normalized = json.data
-      .filter((e) => e.ipAddress) // 🔥 removes hyphen / blank rows
-      .map((e) => ({
-        ip: e.ipAddress,
-        country: e.countryCode ?? "unknown",
-        confidence: e.abuseConfidenceScore,
-        lastSeen: e.lastReportedAt ?? "unknown",
-        severity:
-          e.abuseConfidenceScore >= 90
-            ? "critical"
-            : e.abuseConfidenceScore >= 70
-            ? "high"
-            : "medium",
-      }));
+    const normalized = normalize(json.data);
 
     cache = {
-      rawEvents: normalized,
+      data: normalized,
       lastFetch: now,
     };
 
     return Response.json({
+      // 🔙 legacy
+      events: normalized,
+      geoSummary: aggregateByCountry(normalized),
+
+      // 🆕 new
       rawEvents: normalized,
       aggregations: {
         byCountry: aggregateByCountry(normalized),
       },
+
       lastUpdated: now,
       source: "abuseipdb",
     });
   } catch (err) {
-    // 3️⃣ Fallback: disk sample
-    const sample = loadSampleData().filter((e) => e.ip);
+    // 3️⃣ Fallback → sample data
+    const sample = loadSampleData();
+    const normalized = normalize(sample);
 
     return Response.json({
-      rawEvents: sample,
+      // 🔙 legacy
+      events: normalized,
+      geoSummary: aggregateByCountry(normalized),
+
+      // 🆕 new
+      rawEvents: normalized,
       aggregations: {
-        byCountry: aggregateByCountry(sample),
+        byCountry: aggregateByCountry(normalized),
       },
+
       lastUpdated: now,
       source: "sample-data",
     });
