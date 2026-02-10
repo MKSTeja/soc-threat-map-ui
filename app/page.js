@@ -33,13 +33,23 @@ export default async function Home() {
     );
   }
 
-  const events = Array.isArray(payload)
-    ? payload
-    : payload.events ?? [];
-
-  const lastUpdated = payload.lastUpdated ?? null;
+  /**
+   * DO NOT reshape data here.
+   * Treat API response as a contract.
+   */
+  const {
+    events = [],
+    geoSummary = [],
+    lastUpdated = null,
+    source = "unknown",
+  } = payload ?? {};
 
   return (
-    <ThreatDashboard events={events} lastUpdated={lastUpdated} />
+    <ThreatDashboard
+      events={events}           // raw events → table
+      geoSummary={geoSummary}   // aggregated → map
+      lastUpdated={lastUpdated}
+      source={source}
+    />
   );
 }
