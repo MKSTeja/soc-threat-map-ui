@@ -1,25 +1,27 @@
 // app/page.js (SERVER COMPONENT)
 
-import nextDynamic from "next/dynamic";
+import ThreatDashboard from "./components/ThreatDashboard";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
-
-// Client dashboard
-const ThreatDashboard = nextDynamic(
-  () => import("./components/ThreatDashboard"),
-  { ssr: false }
-);
 
 export default async function Home() {
   let payload;
 
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/events`,
-      { cache: "no-store" }
-    );
+    const headersList = headers();
+    const host = headersList.get("host");
+    const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
 
-    if (!res.ok) throw new Error("Threat feed API failed");
+    const apiUrl = `${protocol}://${host}/api/events`;
+
+    const res = await fetch(apiUrl, {
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      throw new Error("Threat feed API failed");
+    }
 
     payload = await res.json();
   } catch (err) {
@@ -31,21 +33,13 @@ export default async function Home() {
     );
   }
 
-  const rawEvents = Array.isArray(payload)
+  const events = Array.isArray(payload)
     ? payload
     : payload.events ?? [];
 
-  // Normalize once (server-side)
-  const events = rawEvents.map((e) => ({
-    ...e,
-    severity: e.severity?.toLowerCase() || "medium",
-  }));
+  const lastUpdated = payload.lastUpdated ?? null;
 
   return (
-    <ThreatDashboard
-      events={events}
-      lastUpdated={payload.lastUpdated ?? null}
-    />
+    <ThreatDashboard events={events} lastUpdated={lastUpdated} />
   );
 }
-
