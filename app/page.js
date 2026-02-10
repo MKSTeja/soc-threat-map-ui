@@ -1,27 +1,14 @@
 // app/page.js (SERVER COMPONENT)
 
 import nextDynamic from "next/dynamic";
-import { useState } from "react";
 
 export const dynamic = "force-dynamic";
 
-// Client-only components
-const ThreatMap = nextDynamic(
-  () => import("./components/ThreatMap"),
+// Client dashboard
+const ThreatDashboard = nextDynamic(
+  () => import("./components/ThreatDashboard"),
   { ssr: false }
 );
-
-const ThreatTable = nextDynamic(
-  () => import("./components/ThreatTable"),
-  { ssr: false }
-);
-
-const SEVERITIES = [
-  { label: "ALL", value: "all" },
-  { label: "CRITICAL", value: "critical" },
-  { label: "HIGH", value: "high" },
-  { label: "MEDIUM", value: "medium" },
-];
 
 export default async function Home() {
   let payload;
@@ -48,67 +35,17 @@ export default async function Home() {
     ? payload
     : payload.events ?? [];
 
-  // 🔑 Normalize ONCE
+  // Normalize once (server-side)
   const events = rawEvents.map((e) => ({
     ...e,
     severity: e.severity?.toLowerCase() || "medium",
   }));
 
-  const lastUpdated = payload.lastUpdated ?? null;
-
-  return <ThreatDashboard events={events} lastUpdated={lastUpdated} />;
-}
-
-/**
- * Client-side dashboard wrapper
- */
-function ThreatDashboard({ events, lastUpdated }) {
-  const [activeSeverity, setActiveSeverity] = useState("all");
-
-  const filteredEvents =
-    activeSeverity === "all"
-      ? events
-      : events.filter((e) => e.severity === activeSeverity);
-
   return (
-    <main style={{ padding: 24, fontFamily: "monospace" }}>
-      <h1>🌐 Global Threat Map</h1>
-      <p>Live abuse intelligence feed (MVP)</p>
-
-      {lastUpdated && (
-        <p style={{ opacity: 0.6 }}>
-          Last refreshed: {new Date(lastUpdated).toUTCString()}
-        </p>
-      )}
-
-      {/* 🔘 Severity Filters */}
-      <div style={{ display: "flex", gap: 10, margin: "16px 0" }}>
-        {SEVERITIES.map((s) => (
-          <button
-            key={s.value}
-            onClick={() => setActiveSeverity(s.value)}
-            style={{
-              padding: "6px 14px",
-              borderRadius: 8,
-              border: "1px solid #334155",
-              background:
-                activeSeverity === s.value ? "#020617" : "#020617aa",
-              color: "#e5e7eb",
-              cursor: "pointer",
-            }}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 🔎 Result count */}
-      <p style={{ opacity: 0.6, marginBottom: 8 }}>
-        Showing {filteredEvents.length} of {events.length} threats
-      </p>
-
-      <ThreatMap events={filteredEvents} />
-      <ThreatTable events={filteredEvents} />
-    </main>
+    <ThreatDashboard
+      events={events}
+      lastUpdated={payload.lastUpdated ?? null}
+    />
   );
 }
+
