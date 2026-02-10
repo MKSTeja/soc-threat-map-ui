@@ -15,7 +15,7 @@ const COUNTRY_COORDS = {
 };
 
 function normalizeCountry(code) {
-  if (!code || typeof code !== "string") return null;
+  if (!code) return null;
   return code.toUpperCase().slice(0, 2);
 }
 
@@ -43,75 +43,53 @@ export default function ThreatMap({ events }) {
           borderRadius: 12,
           background: "#020617",
           color: "#94a3b8",
-          marginBottom: 24,
         }}
       >
-        No threat data available (feed idle or rate-limited)
+        No threat data for current filters
       </div>
     );
   }
 
   return (
-    <div style={{ marginBottom: 24 }}>
-      <MapContainer
-        center={[20, 0]}
-        zoom={2}
-        style={{ height: "420px", width: "100%", borderRadius: 12 }}
-      >
-        <TileLayer
-          attribution="© OpenStreetMap"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+    <MapContainer
+      center={[20, 0]}
+      zoom={2}
+      style={{ height: "420px", width: "100%", borderRadius: 12 }}
+    >
+      <TileLayer
+        attribution="© OpenStreetMap"
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
 
-        {events.map((e, i) => {
-          const countryCode = normalizeCountry(
-            e.country || e.countryCode
-          );
+      {events.map((e, i) => {
+        const countryCode = normalizeCountry(
+          e.country || e.countryCode
+        );
+        const coords = COUNTRY_COORDS[countryCode];
+        if (!coords) return null;
 
-          const coords = COUNTRY_COORDS[countryCode];
-          if (!coords) return null;
-
-          return (
-            <CircleMarker
-              key={i}
-              center={coords}
-              radius={getRadius(e.severity)}
-              fillColor={getColor(e.severity)}
-              fillOpacity={0.85}
-              color="#000"
-              weight={1}
-            >
-              <Popup>
-                <strong>{e.ip}</strong>
-                <br />
-                Country: {countryCode}
-                <br />
-                Confidence: {e.confidence}
-                <br />
-                Severity: {e.severity}
-                <br />
-                Last Seen:{" "}
-                {e.lastSeen
-                  ? new Date(e.lastSeen).toUTCString()
-                  : "unknown"}
-              </Popup>
-            </CircleMarker>
-          );
-        })}
-      </MapContainer>
-
-      <div
-        style={{
-          marginTop: 8,
-          fontSize: 13,
-          display: "flex",
-          gap: 16,
-        }}
-      >
-        <span style={{ color: "#ff2b2b" }}>● Critical</span>
-        <span style={{ color: "#ff8c00" }}>● High</span>
-        <span style={{ color: "#ffd700" }}>● Medium</span>
-      </div>
-    </div>
+        return (
+          <CircleMarker
+            key={i}
+            center={coords}
+            radius={getRadius(e.severity)}
+            fillColor={getColor(e.severity)}
+            fillOpacity={0.85}
+            color="#000"
+            weight={1}
+          >
+            <Popup>
+              <strong>{e.ip}</strong>
+              <br />
+              Country: {countryCode}
+              <br />
+              Severity: {e.severity}
+              <br />
+              Confidence: {e.confidence}
+            </Popup>
+          </CircleMarker>
+        );
+      })}
+    </MapContainer>
   );
 }
