@@ -3,6 +3,10 @@
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
+/**
+ * Country centroids (ISO-2)
+ * Extend as needed
+ */
 const COUNTRY_COORDS = {
   DE: [51.1657, 10.4515],
   RO: [45.9432, 24.9668],
@@ -14,13 +18,27 @@ const COUNTRY_COORDS = {
   IN: [20.5937, 78.9629],
 };
 
-// A11.2 + A11.5 helpers
+/**
+ * Normalize country input from feeds:
+ * - "DE", "de", "DEU", "usa" → "DE", "US"
+ */
+function normalizeCountry(code) {
+  if (!code || typeof code !== "string") return null;
+  return code.toUpperCase().slice(0, 2);
+}
+
+/**
+ * Severity → color
+ */
 function getColor(severity) {
   if (severity === "critical") return "#ff2b2b";
   if (severity === "high") return "#ff8c00";
   return "#ffd700";
 }
 
+/**
+ * Severity → radius
+ */
 function getRadius(severity) {
   if (severity === "critical") return 14;
   if (severity === "high") return 10;
@@ -28,8 +46,13 @@ function getRadius(severity) {
 }
 
 export default function ThreatMap({ events }) {
-  // FIX 1 — Empty-state handling
-  if (!events || events.length === 0) {
+  // Debug (safe to remove later)
+  console.log("ThreatMap received events:", events);
+
+  /**
+   * FIX 1 — Empty or missing feed
+   */
+  if (!Array.isArray(events) || events.length === 0) {
     return (
       <div
         style={{
@@ -62,10 +85,14 @@ export default function ThreatMap({ events }) {
         />
 
         {events.map((e, i) => {
-          // FIX 2 — Normalize country codes
-          const coords =
-            COUNTRY_COORDS[e.country?.toUpperCase()];
+          /**
+           * FIX 2 — Country normalization + fallback
+           */
+          const countryCode = normalizeCountry(
+            e.country || e.countryCode
+          );
 
+          const coords = COUNTRY_COORDS[countryCode];
           if (!coords) return null;
 
           return (
@@ -79,24 +106,32 @@ export default function ThreatMap({ events }) {
               weight={1}
             >
               <Popup>
-                <strong>{e.ip}</strong><br />
-                Country: {e.country}<br />
-                Confidence: {e.confidence}<br />
-                Severity: {e.severity}<br />
-                Last Seen: {new Date(e.lastSeen).toUTCString()}
+                <strong>{e.ip}</strong>
+                <br />
+                Country: {countryCode}
+                <br />
+                Confidence: {e.confidence}
+                <br />
+                Severity: {e.severity}
+                <br />
+                Last Seen:{" "}
+                {e.lastSeen
+                  ? new Date(e.lastSeen).toUTCString()
+                  : "unknown"}
               </Popup>
             </CircleMarker>
           );
         })}
       </MapContainer>
 
-      {/* A11.2 — Legend */}
+      {/* Legend */}
       <div
         style={{
           marginTop: 8,
           fontSize: 13,
           display: "flex",
           gap: 16,
+          fontFamily: "monospace",
         }}
       >
         <span style={{ color: "#ff2b2b" }}>● Critical</span>
