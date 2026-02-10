@@ -6,17 +6,43 @@ import ThreatTable from "./ThreatTable";
 
 const SEVERITIES = ["all", "critical", "high", "medium"];
 
-export default function ThreatDashboard({ events, lastUpdated }) {
+export default function ThreatDashboard({
+  events,
+  geoSummary,
+  lastUpdated,
+  source,
+}) {
   const [severityFilter, setSeverityFilter] = useState("all");
+  const [countryFilter, setCountryFilter] = useState("");
+  const [ipFilter, setIpFilter] = useState("");
 
-  // 1️⃣ Raw events (never aggregated)
+  // 1️⃣ Raw events (never mutated)
   const rawEvents = Array.isArray(events) ? events : [];
 
-  // 2️⃣ Filtered events (used for map + stats)
+  // 2️⃣ Filtered events (map + stats)
   const filteredEvents = useMemo(() => {
-    if (severityFilter === "all") return rawEvents;
-    return rawEvents.filter((e) => e.severity === severityFilter);
-  }, [rawEvents, severityFilter]);
+    return rawEvents.filter((e) => {
+      if (
+        severityFilter !== "all" &&
+        e.severity !== severityFilter
+      ) {
+        return false;
+      }
+
+      if (
+        countryFilter &&
+        e.country?.toLowerCase() !== countryFilter.toLowerCase()
+      ) {
+        return false;
+      }
+
+      if (ipFilter && !e.ip?.includes(ipFilter)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [rawEvents, severityFilter, countryFilter, ipFilter]);
 
   return (
     <main
@@ -49,7 +75,12 @@ export default function ThreatDashboard({ events, lastUpdated }) {
         </div>
 
         <div style={{ textAlign: "right", fontSize: 12, opacity: 0.6 }}>
-          <div>Status: <span style={{ color: "#22c55e" }}>LIVE</span></div>
+          <div>
+            Source: <strong>{source}</strong>
+          </div>
+          <div>
+            Status: <span style={{ color: "#22c55e" }}>LIVE</span>
+          </div>
           {lastUpdated && (
             <div>
               Updated: {new Date(lastUpdated).toUTCString()}
@@ -59,8 +90,9 @@ export default function ThreatDashboard({ events, lastUpdated }) {
       </header>
 
       {/* ================= FILTER BAR ================= */}
-      <section style={{ marginBottom: 12 }}>
-        <div style={{ display: "flex", gap: 8 }}>
+      <section style={{ marginBottom: 16 }}>
+        {/* Severity */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           {SEVERITIES.map((s) => (
             <button
               key={s}
@@ -81,19 +113,44 @@ export default function ThreatDashboard({ events, lastUpdated }) {
           ))}
         </div>
 
+        {/* IP + Country */}
+        <div style={{ display: "flex", gap: 12 }}>
+          <input
+            placeholder="Filter by IP"
+            value={ipFilter}
+            onChange={(e) => setIpFilter(e.target.value)}
+            style={{
+              padding: 6,
+              background: "#020617",
+              border: "1px solid #334155",
+              color: "#e5e7eb",
+            }}
+          />
+
+          <input
+            placeholder="Filter by Country (US, IN, DE)"
+            value={countryFilter}
+            onChange={(e) => setCountryFilter(e.target.value)}
+            style={{
+              padding: 6,
+              background: "#020617",
+              border: "1px solid #334155",
+              color: "#e5e7eb",
+            }}
+          />
+        </div>
+
         <p style={{ opacity: 0.7, marginTop: 8 }}>
           Showing {filteredEvents.length} of {rawEvents.length} threats
         </p>
       </section>
 
       {/* ================= MAP ================= */}
-      {/* Map always works on FILTERED events */}
       <section style={{ marginBottom: 24 }}>
         <ThreatMap events={filteredEvents} />
       </section>
 
       {/* ================= TABLE ================= */}
-      {/* Table always shows RAW normalized events */}
       <section>
         <ThreatTable events={rawEvents} />
       </section>
