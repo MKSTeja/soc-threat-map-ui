@@ -1,23 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import ThreatMap from "./ThreatMap";
 import ThreatTable from "./ThreatTable";
 
-const SEVERITIES = [
-  { label: "ALL", value: "all" },        // UI-only state
-  { label: "CRITICAL", value: "critical" },
-  { label: "HIGH", value: "high" },
-  { label: "MEDIUM", value: "medium" },
-];
+const SEVERITIES = ["all", "critical", "high", "medium"];
 
 export default function ThreatDashboard({ events, lastUpdated }) {
-  const [activeSeverity, setActiveSeverity] = useState("all");
+  const [severityFilter, setSeverityFilter] = useState("all");
 
-  const filteredEvents =
-    activeSeverity === "all"
-      ? events
-      : events.filter((e) => e.severity === activeSeverity);
+  // 1️⃣ Raw events (never aggregated)
+  const rawEvents = Array.isArray(events) ? events : [];
+
+  // 2️⃣ Filtered events (used for map + stats)
+  const filteredEvents = useMemo(() => {
+    if (severityFilter === "all") return rawEvents;
+    return rawEvents.filter(
+      (e) => e.severity === severityFilter
+    );
+  }, [rawEvents, severityFilter]);
 
   return (
     <main style={{ padding: 24, fontFamily: "monospace" }}>
@@ -25,38 +26,41 @@ export default function ThreatDashboard({ events, lastUpdated }) {
       <p>Live abuse intelligence feed (MVP)</p>
 
       {lastUpdated && (
-        <p style={{ opacity: 0.6 }}>
+        <p style={{ opacity: 0.7 }}>
           Last refreshed: {new Date(lastUpdated).toUTCString()}
         </p>
       )}
 
-      {/* Severity Filters */}
-      <div style={{ display: "flex", gap: 10, margin: "16px 0" }}>
+      {/* Severity filters */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         {SEVERITIES.map((s) => (
           <button
-            key={s.value}
-            onClick={() => setActiveSeverity(s.value)}
+            key={s}
+            onClick={() => setSeverityFilter(s)}
             style={{
-              padding: "6px 14px",
-              borderRadius: 8,
+              padding: "6px 12px",
+              borderRadius: 6,
               border: "1px solid #334155",
               background:
-                activeSeverity === s.value ? "#020617" : "#020617aa",
+                severityFilter === s ? "#0f172a" : "transparent",
               color: "#e5e7eb",
               cursor: "pointer",
             }}
           >
-            {s.label}
+            {s.toUpperCase()}
           </button>
         ))}
       </div>
 
-      <p style={{ opacity: 0.6 }}>
-        Showing {filteredEvents.length} of {events.length} threats
+      <p style={{ opacity: 0.7 }}>
+        Showing {filteredEvents.length} of {rawEvents.length} threats
       </p>
 
+      {/* Map gets FILTERED events */}
       <ThreatMap events={filteredEvents} />
-      <ThreatTable events={filteredEvents} />
+
+      {/* Table gets RAW events */}
+      <ThreatTable events={rawEvents} />
     </main>
   );
 }
